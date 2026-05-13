@@ -43,10 +43,13 @@ app.get('/debug', (req, res) => {
   res.json({
     token_loaded: !!config.BOT_TOKEN,
     token_hint: config.BOT_TOKEN ? `${config.BOT_TOKEN.split(':')[0]}...` : 'not loaded',
+    groq_keys_count: config.GROQ_API_KEYS.length,
+    groq_keys_loaded: config.GROQ_API_KEYS.map(k => `${k.substring(0, 6)}...`),
+    channel_id: config.CHANNEL_ID,
+    channel_link: config.CHANNEL_LINK,
     webhook_domain: config.WEBHOOK_DOMAIN,
     node_env: config.NODE_ENV,
-    is_vercel: !!process.env.VERCEL,
-    port: config.PORT
+    is_vercel: !!process.env.VERCEL
   });
 });
 
