@@ -26,7 +26,10 @@ async function callGroqWithRotation(requestPayload) {
     const groq = new Groq({ apiKey: currentKey });
 
     try {
-      return await groq.chat.completions.create(requestPayload);
+      logger.info(`[Groq] Calling API with key at index ${currentKeyIndex}...`);
+      const response = await groq.chat.completions.create(requestPayload);
+      logger.info(`[Groq] API call successful.`);
+      return response;
     } catch (error) {
       // Check if the error is due to Rate Limit (429), Insufficient Quota (402/403), or Invalid Key (401)
       const status = error.status;
@@ -39,10 +42,12 @@ async function callGroqWithRotation(requestPayload) {
         currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
         attempt++;
       } else {
+        logger.error(`[Groq] Non-rotatable error (Status: ${status}): ${error.message}`);
         // If it's a completely different error (e.g. bad request, network issue), throw it
         throw error;
       }
     }
+
   }
 
   // If the loop finishes, all keys are exhausted
