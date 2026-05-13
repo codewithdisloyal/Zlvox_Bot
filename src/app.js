@@ -1,19 +1,53 @@
+const express = require('express');
 const bot = require('./bot');
+const config = require('./utils/env');
+const logger = require('./utils/logger');
 
-// Start the bot
-bot.launch().then(() => {
-  console.log('🚀 ZLVOX Telegram Bot is running...');
-}).catch((err) => {
-  console.error('❌ Failed to start the bot:', err);
+const app = express();
+
+// Parse JSON bodies (Required for Telegram Webhooks)
+app.use(express.json());
+
+// Set up webhook or polling based on environment configuration
+if (config.WEBHOOK_DOMAIN) {
+  // Use a secret path to prevent unauthorized requests
+  const webhookPath = `/telegraf/${bot.secretPathComponent()}`;
+  const webhookUrl = `${config.WEBHOOK_DOMAIN}${webhookPath}`;
+
+  // Tell Telegram to send updates to this URL
+  bot.telegram.setWebhook(webhookUrl)
+    .then(() => logger.info(`[Webhook] Set successfully to ${webhookUrl}`))
+    .catch((err) => logger.error('[Webhook] Failed to set webhook:', err));
+
+  // Connect Express to Telegraf
+  app.use(bot.webhookCallback(webhookPath));
+
+  logger.info('🚀 Starting bot in WEBHOOK mode...');
+} else {
+  // Fallback to Long Polling for local development
+  logger.info('🚀 Starting bot in POLLING mode (Local Development)...');
+  bot.launch().catch(err => logger.error('Failed to launch polling:', err));
+}
+
+// A simple health check route (Hostinger needs this to verify the app is alive)
+app.get('/', (req, res) => {
+  res.send('✅ ZLVOX Telegram Bot is running perfectly!');
+});
+
+// Start the Express Server
+app.listen(config.PORT, () => {
+  logger.info(`🌐 Express server listening on port ${config.PORT}`);
 });
 
 // Enable graceful stop
 process.once('SIGINT', () => {
-  console.log('SIGINT received. Stopping bot...');
+  logger.info('SIGINT received. Stopping bot...');
   bot.stop('SIGINT');
+  process.exit(0);
 });
 
 process.once('SIGTERM', () => {
-  console.log('SIGTERM received. Stopping bot...');
+  logger.info('SIGTERM received. Stopping bot...');
   bot.stop('SIGTERM');
+  process.exit(0);
 });
