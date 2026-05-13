@@ -28,13 +28,13 @@ async function callGroqWithRotation(requestPayload) {
     try {
       return await groq.chat.completions.create(requestPayload);
     } catch (error) {
-      // Check if the error is due to Rate Limit (429) or Insufficient Quota (402/403)
+      // Check if the error is due to Rate Limit (429), Insufficient Quota (402/403), or Invalid Key (401)
       const status = error.status;
       const msg = error.error?.error?.message?.toLowerCase() || '';
-      const isQuotaError = status === 429 || status === 402 || status === 403 || msg.includes('quota') || msg.includes('rate limit');
+      const isRotatableError = status === 429 || status === 402 || status === 403 || status === 401 || msg.includes('quota') || msg.includes('rate limit') || msg.includes('api key');
 
-      if (isQuotaError) {
-        logger.warn(`[Groq] Key at index ${currentKeyIndex} failed (Rate Limit/Quota). Rotating to next key...`);
+      if (isRotatableError) {
+        logger.warn(`[Groq] Key at index ${currentKeyIndex} failed (Status: ${status}). Rotating to next key...`);
         // Move to the next key circularly
         currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
         attempt++;
@@ -46,7 +46,7 @@ async function callGroqWithRotation(requestPayload) {
   }
 
   // If the loop finishes, all keys are exhausted
-  throw new Error('All provided Groq API keys are exhausted or rate-limited.');
+  throw new Error('All provided Groq API keys are exhausted, invalid, or rate-limited.');
 }
 
 /**
@@ -64,7 +64,7 @@ Return ONLY the idea itself, formatted elegantly with markdown (e.g., bold the c
         { role: 'system', content: 'You are a master content strategist and viral marketer.' },
         { role: 'user', content: prompt },
       ],
-      model: 'llama3-8b-8192', // Fast model
+      model: 'llama-3.1-8b-instant', // Newer, more stable model on Groq
       temperature: 0.8,
       max_tokens: 150,
     });
@@ -72,7 +72,7 @@ Return ONLY the idea itself, formatted elegantly with markdown (e.g., bold the c
     return response.choices[0]?.message?.content?.trim() || 'Oops, failed to generate an idea.';
   } catch (error) {
     logger.error('Groq API Error in generateViralIdea:', error.message);
-    throw new Error('Could not generate idea using Groq.');
+    throw new Error(`Groq API Error: ${error.message}`);
   }
 }
 
@@ -92,7 +92,7 @@ async function generateChatResponse(prompt, userId) {
         },
         { role: 'user', content: prompt },
       ],
-      model: 'llama3-8b-8192', // Fast model
+      model: 'llama-3.1-8b-instant', // Newer, more stable model on Groq
       temperature: 0.7,
       max_tokens: 500,
     });
