@@ -34,10 +34,15 @@ app.get('/', (req, res) => {
   res.send('✅ ZLVOX Telegram Bot is running perfectly!');
 });
 
-// Start the Express Server
-app.listen(config.PORT, () => {
-  logger.info(`🌐 Express server listening on port ${config.PORT}`);
-});
+// Start the Express Server if not running on Vercel
+if (!process.env.VERCEL) {
+  app.listen(config.PORT, () => {
+    logger.info(`🌐 Express server listening on port ${config.PORT}`);
+  });
+}
+
+// Export for Vercel Serverless Functions
+module.exports = app;
 
 // Enable graceful stop
 process.once('SIGINT', () => {
