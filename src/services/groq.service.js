@@ -1,0 +1,110 @@
+const Groq = require('groq-sdk');
+const config = require('../utils/env');
+const logger = require('../utils/logger');
+
+const apiKeys = config.GROQ_API_KEYS;
+let currentKeyIndex = 0;
+
+if (apiKeys.length === 0) {
+  logger.warn('⚠️ No GROQ_API_KEYS are set in .env. AI features will fail.');
+}
+
+/**
+ * Core wrapper to handle API Key rotation when quotas are exceeded
+ * @param {Object} requestPayload - The Groq chat completions request payload
+ * @returns {Promise<Object>} The API response
+ */
+async function callGroqWithRotation(requestPayload) {
+  if (apiKeys.length === 0) {
+    throw new Error('No Groq API keys available.');
+  }
+
+  let attempt = 0;
+  
+  while (attempt < apiKeys.length) {
+    const currentKey = apiKeys[currentKeyIndex];
+    const groq = new Groq({ apiKey: currentKey });
+
+    try {
+      return await groq.chat.completions.create(requestPayload);
+    } catch (error) {
+      // Check if the error is due to Rate Limit (429) or Insufficient Quota (402/403)
+      const status = error.status;
+      const msg = error.error?.error?.message?.toLowerCase() || '';
+      const isQuotaError = status === 429 || status === 402 || status === 403 || msg.includes('quota') || msg.includes('rate limit');
+
+      if (isQuotaError) {
+        logger.warn(`[Groq] Key at index ${currentKeyIndex} failed (Rate Limit/Quota). Rotating to next key...`);
+        // Move to the next key circularly
+        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+        attempt++;
+      } else {
+        // If it's a completely different error (e.g. bad request, network issue), throw it
+        throw error;
+      }
+    }
+  }
+
+  // If the loop finishes, all keys are exhausted
+  throw new Error('All provided Groq API keys are exhausted or rate-limited.');
+}
+
+/**
+ * Generates a viral content idea using Groq API
+ * @returns {Promise<string>} The generated idea
+ */
+async function generateViralIdea() {
+  const prompt = `Generate ONE random, highly engaging and viral content idea. 
+Choose exactly one category from this list: AI tools, SaaS ideas, YouTube shorts ideas, Instagram viral posts, Developer tools.
+Return ONLY the idea itself, formatted elegantly with markdown (e.g., bold the category name). Do not include any intro, outro, or conversational text. Keep it concise, punchy, and highly valuable.`;
+
+  try {
+    const response = await callGroqWithRotation({
+      messages: [
+        { role: 'system', content: 'You are a master content strategist and viral marketer.' },
+        { role: 'user', content: prompt },
+      ],
+      model: 'llama3-8b-8192', // Fast model
+      temperature: 0.8,
+      max_tokens: 150,
+    });
+
+    return response.choices[0]?.message?.content?.trim() || 'Oops, failed to generate an idea.';
+  } catch (error) {
+    logger.error('Groq API Error in generateViralIdea:', error.message);
+    throw new Error('Could not generate idea using Groq.');
+  }
+}
+
+/**
+ * Generates a general conversational response using Groq API
+ * @param {string} prompt - The user's input message
+ * @param {string|number} [userId] - Optional user ID for context tracking
+ * @returns {Promise<string>} The generated response
+ */
+async function generateChatResponse(prompt, userId) {
+  try {
+    const response = await callGroqWithRotation({
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful, smart, and concise AI assistant integrated into a Telegram bot. Keep your answers formatting clean and user-friendly using Markdown.',
+        },
+        { role: 'user', content: prompt },
+      ],
+      model: 'llama3-8b-8192', // Fast model
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+
+    return response.choices[0]?.message?.content?.trim() || 'Sorry, I could not think of a response right now.';
+  } catch (error) {
+    logger.error(`Groq API Error for user ${userId}:`, error.message);
+    throw new Error('Could not generate chat response using Groq.');
+  }
+}
+
+module.exports = {
+  generateViralIdea,
+  generateChatResponse,
+};
