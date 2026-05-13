@@ -78,10 +78,11 @@ Return ONLY the idea itself, formatted elegantly with markdown. Do not include a
         { role: 'system', content: 'You are a master content strategist and viral marketer.' },
         { role: 'user', content: prompt },
       ],
-      model: 'llama-3.1-8b-instant',
+      model: 'llama3-8b-8192',
       temperature: 0.8,
-      max_tokens: 250, // Increased slightly for better details
+      max_tokens: 250, 
     });
+
 
     return response.choices[0]?.message?.content?.trim() || 'Oops, failed to generate an idea.';
   } catch (error) {

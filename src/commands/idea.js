@@ -55,7 +55,9 @@ module.exports = (bot) => {
       logger.info(`[Idea] User ${ctx.from.id} selected category: ${category.name}`);
       await ctx.answerCbQuery(`Generating ${category.name} idea...`);
       
-      const loadingMsg = await ctx.reply(`⏳ <b>Generating a brilliant idea for:</b> ${category.name}...`, { parse_mode: 'HTML' });
+      const debugId = Date.now().toString().slice(-4);
+      const loadingMsg = await ctx.reply(`⏳ [${debugId}] <b>Generating a brilliant idea for:</b> ${category.name}...`, { parse_mode: 'HTML' });
+
       
       const idea = await groqService.generateViralIdea(category.name);
       logger.info(`[Idea] Successfully generated idea for ${category.name}`);
