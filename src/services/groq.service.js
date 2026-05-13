@@ -51,12 +51,21 @@ async function callGroqWithRotation(requestPayload) {
 
 /**
  * Generates a viral content idea using Groq API
+ * @param {string} [category] - Optional specific category for the idea
  * @returns {Promise<string>} The generated idea
  */
-async function generateViralIdea() {
-  const prompt = `Generate ONE random, highly engaging and viral content idea. 
-Choose exactly one category from this list: AI tools, SaaS ideas, YouTube shorts ideas, Instagram viral posts, Developer tools.
-Return ONLY the idea itself, formatted elegantly with markdown (e.g., bold the category name). Do not include any intro, outro, or conversational text. Keep it concise, punchy, and highly valuable.`;
+async function generateViralIdea(category) {
+  let prompt = '';
+  
+  if (category) {
+    prompt = `Generate ONE highly engaging and viral content idea specifically for the category: "${category}".
+Return ONLY the idea itself, formatted elegantly with markdown (e.g., use bold text and bullet points where appropriate). 
+Do not include any intro, outro, or conversational text. Keep it concise, punchy, and highly valuable.`;
+  } else {
+    prompt = `Generate ONE random, highly engaging and viral content idea. 
+Choose exactly one category from a wide range of digital platforms (SaaS, Social Media, Programming, etc.).
+Return ONLY the idea itself, formatted elegantly with markdown. Do not include any intro, outro, or conversational text. Keep it concise, punchy, and highly valuable.`;
+  }
 
   try {
     const response = await callGroqWithRotation({
@@ -64,9 +73,9 @@ Return ONLY the idea itself, formatted elegantly with markdown (e.g., bold the c
         { role: 'system', content: 'You are a master content strategist and viral marketer.' },
         { role: 'user', content: prompt },
       ],
-      model: 'llama-3.1-8b-instant', // Newer, more stable model on Groq
+      model: 'llama-3.1-8b-instant',
       temperature: 0.8,
-      max_tokens: 150,
+      max_tokens: 250, // Increased slightly for better details
     });
 
     return response.choices[0]?.message?.content?.trim() || 'Oops, failed to generate an idea.';
@@ -75,6 +84,7 @@ Return ONLY the idea itself, formatted elegantly with markdown (e.g., bold the c
     throw new Error(`Groq API Error: ${error.message}`);
   }
 }
+
 
 /**
  * Generates a general conversational response using Groq API
