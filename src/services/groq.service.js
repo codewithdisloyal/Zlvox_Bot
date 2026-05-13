@@ -78,7 +78,7 @@ Return ONLY the idea itself, formatted elegantly with markdown. Do not include a
         { role: 'system', content: 'You are a master content strategist and viral marketer.' },
         { role: 'user', content: prompt },
       ],
-      model: 'llama3-8b-8192',
+      model: 'llama-3.1-8b-instant', // Active Groq model
       temperature: 0.8,
       max_tokens: 250, 
     });
@@ -108,7 +108,7 @@ async function generateChatResponse(prompt, userId) {
         },
         { role: 'user', content: prompt },
       ],
-      model: 'llama-3.1-8b-instant', // Newer, more stable model on Groq
+      model: 'llama-3.3-70b-versatile', // Active Groq model for chat
       temperature: 0.7,
       max_tokens: 500,
     });
